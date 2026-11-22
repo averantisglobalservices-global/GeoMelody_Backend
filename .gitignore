@@ -1,0 +1,61 @@
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+**/dist/
+build/
+**/build/
+
+# Environment variables - NEVER COMMIT SECRETS
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*asd
+pnpm-debug.log*
+yarn-debug.log*    
+yarn-error.log*
+
+# Coverage and tests
+coverage/
+.nyc_output/
+
+# Generated files
+generated/
+**/generated/
+
+# Prisma generated output
+**/generated/prisma/
+
+# Uploads and runtime data
+uploads/
+**/uploads/
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+.temp/
+.tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json 
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-workspace
+
+# Diagnostic reports
+report.*.*.*.*.json

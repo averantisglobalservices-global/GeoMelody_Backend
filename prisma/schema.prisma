@@ -1,0 +1,720 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum ArtistRegistrationStatus {
+  PENDING_VERIFICATION
+  EMAIL_VERIFIED
+  MOBILE_VERIFIED
+  READY_TO_COMPLETE
+  COMPLETED
+  EXPIRED
+}
+
+// ============================================================
+// USER
+// ============================================================
+
+model User {
+  id String @id @default(uuid())
+
+  email String @unique
+
+  countryCode String?
+  mobile      String?
+
+  passwordHash String?
+
+  firstName String?
+  lastName  String?
+
+  // 1 = Active
+  // 0 = Inactive
+  status Int @default(1)
+
+  // Profile completion percentage
+  // Registration completed = 25%
+  // Fully completed profile = 100%
+  profileCompletionPercentage Float @default(25)
+
+  roleId String
+
+  emailVerified  Boolean @default(false)
+  mobileVerified Boolean @default(false)
+
+  deletedAt   DateTime?
+  lastLoginAt DateTime?
+  lastLoginIp String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  refreshTokens      RefreshToken[]
+  passwordResets     PasswordReset[]
+  emailVerifications EmailVerification[]
+  loginHistory       LoginHistory[]
+
+  auditLogs AuditLog[] @relation("AuditActor")
+
+  artistRegistration ArtistRegistration? @relation("ArtistRegistrationUser")
+
+  artistProfile ArtistProfile?
+
+  @@unique([countryCode, mobile])
+  @@index([roleId])
+  @@index([status])
+  @@index([deletedAt])
+  @@index([createdAt])
+  @@index([lastLoginAt])
+}
+
+model ArtistLoginOtp {
+  id String @id @default(uuid())
+
+  email       String?
+  countryCode String?
+  mobile      String?
+
+  otpHash   String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email])
+  @@index([countryCode, mobile])
+  @@index([expiresAt])
+  @@index([createdAt])
+}
+
+// ============================================================
+// ROLE
+// ============================================================
+
+model Role {
+  id          String  @id @default(uuid())
+  code        String  @unique
+  name        String
+  description String?
+
+  status Int @default(1)
+
+  isAdmin   Boolean   @default(false)
+  isSystem  Boolean   @default(false)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       User[]
+  permissions RolePermission[]
+
+  @@index([status])
+  @@index([isAdmin])
+  @@index([isSystem])
+  @@index([deletedAt])
+  @@index([createdAt])
+}
+
+// ============================================================
+// PERMISSION
+// ============================================================
+
+model Permission {
+  id          String  @id @default(uuid())
+  code        String  @unique
+  name        String
+  description String?
+
+  status   Int     @default(1)
+  isSystem Boolean @default(false)
+
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roles RolePermission[]
+
+  @@index([status])
+  @@index([isSystem])
+  @@index([deletedAt])
+  @@index([createdAt])
+}
+
+// ============================================================
+// ROLE PERMISSION
+// ============================================================
+
+model RolePermission {
+  id String @id @default(uuid())
+
+  roleId       String
+  permissionId String
+
+  createdAt DateTime @default(now())
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+// ============================================================
+// REFRESH TOKEN
+// ============================================================
+
+model RefreshToken {
+  id String @id @default(uuid())
+
+  userId String
+
+  tokenHash String
+
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+}
+
+// ============================================================
+// PASSWORD RESET
+// ============================================================
+
+model PasswordReset {
+  id String @id @default(uuid())
+
+  userId String
+
+  tokenHash String
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([usedAt])
+}
+
+// ============================================================
+// EMAIL VERIFICATION
+// ============================================================
+
+model EmailVerification {
+  id String @id @default(uuid())
+
+  userId String
+
+  tokenHash String
+
+  expiresAt  DateTime
+  verifiedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([verifiedAt])
+}
+
+// ============================================================
+// LOGIN HISTORY
+// ============================================================
+
+model LoginHistory {
+  id String @id @default(uuid())
+
+  userId String
+
+  ipAddress String?
+  userAgent String?
+
+  deviceName String?
+  deviceType String?
+  platform   String?
+
+  success       Boolean @default(false)
+  failureReason String?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([success])
+  @@index([ipAddress])
+}
+
+// ============================================================
+// COUNTRY
+// ============================================================
+
+model Country {
+  id String @id @default(uuid())
+
+  name String
+
+  iso2 String  @unique
+  iso3 String? @unique
+
+  phoneCode String?
+
+  status Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cities City[]
+
+  artistRegistrations ArtistRegistration[]
+
+  @@index([status])
+  @@index([name])
+}
+
+// ============================================================
+// CITY
+// ============================================================
+
+model City {
+  id String @id @default(uuid())
+
+  countryId String
+
+  name String
+
+  status Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  country Country @relation(fields: [countryId], references: [id], onDelete: Restrict)
+
+  artistRegistrations ArtistRegistration[]
+
+  @@unique([countryId, name])
+  @@index([countryId])
+  @@index([status])
+  @@index([name])
+}
+
+// ============================================================
+// ARTIST REGISTRATION
+// ============================================================
+
+model ArtistRegistration {
+  id String @id @default(uuid())
+
+  // ==========================================================
+  // REGISTRATION IDENTITY
+  // User can start with either email OR mobile
+  // ==========================================================
+
+  email String? @unique
+
+  countryCode String?
+  mobile      String?
+
+  // ==========================================================
+  // VERIFICATION STATUS
+  // ==========================================================
+
+  emailVerified  Boolean @default(false)
+  mobileVerified Boolean @default(false)
+
+  emailVerifiedAt  DateTime?
+  mobileVerifiedAt DateTime?
+
+  status ArtistRegistrationStatus @default(PENDING_VERIFICATION)
+
+  // ==========================================================
+  // ARTIST PROFILE
+  // Enabled only after both email and mobile are verified
+  // ==========================================================
+
+  title       String?
+  firstName   String?
+  lastName    String?
+  gender      String?
+  dateOfBirth DateTime?
+
+  countryId String?
+  cityId    String?
+
+  // ==========================================================
+  // EMAIL OTP
+  // Expiry: 2 minutes
+  // ==========================================================
+
+  emailOtpHash      String?
+  emailOtpExpiresAt DateTime?
+  emailOtpAttempts  Int       @default(0)
+
+  // ==========================================================
+  // MOBILE OTP
+  // Expiry: 2 minutes
+  // ==========================================================
+
+  mobileOtpHash      String?
+  mobileOtpExpiresAt DateTime?
+  mobileOtpAttempts  Int       @default(0)
+
+  // ==========================================================
+  // REGISTRATION LIFECYCLE
+  // ==========================================================
+
+  // Set only when BOTH email and mobile are verified
+  verificationCompletedAt DateTime?
+
+  // verificationCompletedAt + 15 minutes
+  expiresAt DateTime?
+
+  // Set when registration is successfully completed
+  completedAt DateTime?
+
+  // Created User
+  userId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ==========================================================
+  // RELATIONS
+  // ==========================================================
+
+  country Country? @relation(fields: [countryId], references: [id], onDelete: Restrict)
+
+  city City? @relation(fields: [cityId], references: [id], onDelete: Restrict)
+
+  user User? @relation("ArtistRegistrationUser", fields: [userId], references: [id], onDelete: Restrict)
+
+  // ==========================================================
+  // CONSTRAINTS
+  // ==========================================================
+
+  // ==========================================================
+  // INDEXES
+  // ==========================================================
+
+  @@unique([countryCode, mobile])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([countryId])
+  @@index([cityId])
+  @@index([createdAt])
+  @@index([verificationCompletedAt])
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+
+model AuditLog {
+  id String @id @default(uuid())
+
+  actorId String?
+
+  action String
+  module String
+
+  entityType String?
+  entityId   String?
+
+  oldData Json?
+  newData Json?
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([module])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model MusicGenre {
+  id        String    @id @default(uuid())
+  code      String    @unique
+  name      String
+  image     String?
+  status    Int       @default(1)
+  sortOrder Int       @default(0)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  artistProfiles ArtistProfileGenre[]
+
+  @@index([status])
+  @@index([deletedAt])
+  @@index([sortOrder])
+}
+
+model ArtistRole {
+  id        String    @id @default(uuid())
+  code      String    @unique
+  name      String
+  image     String?
+  status    Int       @default(1)
+  sortOrder Int       @default(0)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  artistProfiles ArtistProfileRole[]
+
+  @@index([status])
+  @@index([deletedAt])
+  @@index([sortOrder])
+}
+
+model Instrument {
+  id        String    @id @default(uuid())
+  code      String    @unique
+  name      String
+  image     String?
+  status    Int       @default(1)
+  sortOrder Int       @default(0)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  artistProfiles ArtistProfileInstrument[]
+
+  @@index([status])
+  @@index([deletedAt])
+  @@index([sortOrder])
+  @@map("instruments")
+}
+
+// ============================================================
+// SUBSCRIPTION PLAN
+// ============================================================
+
+enum SubscriptionBillingPeriod {
+  MONTHLY
+  YEARLY
+}
+
+model SubscriptionPlan {
+  id          String  @id @default(uuid())
+  code        String  @unique
+  name        String
+  description String?
+
+  price    Decimal @db.Decimal(10, 2)
+  currency String  @default("USD")
+
+  billingPeriod SubscriptionBillingPeriod
+
+  status   Int     @default(1)
+  isSystem Boolean @default(false)
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  features SubscriptionPlanFeature[]
+
+  @@index([status])
+  @@index([billingPeriod])
+  @@index([deletedAt])
+}
+
+model SubscriptionPlanFeature {
+  id String @id @default(uuid())
+
+  planId    String
+  name      String
+  sortOrder Int    @default(0)
+
+  status Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  plan SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, name])
+  @@index([planId])
+  @@index([status])
+}
+
+enum ArtistType {
+  SOLO_ARTIST
+  MUSIC_BAND
+}
+
+model ArtistProfile {
+  id String @id @default(uuid())
+
+  userId String @unique
+
+  artistType ArtistType?
+
+  stageName String?
+  bio       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  genres         ArtistProfileGenre[]
+  artistRoles    ArtistProfileRole[]
+  instruments    ArtistProfileInstrument[]
+  bandMembers    BandMember[]
+  visualIdentity ArtistProfileVisual?
+  socialProfile  ArtistSocialProfile?
+
+  @@index([artistType])
+}
+
+model ArtistProfileGenre {
+  id String @id @default(uuid())
+
+  artistProfileId String
+  genreId         String
+
+  createdAt DateTime @default(now())
+
+  artistProfile ArtistProfile @relation(fields: [artistProfileId], references: [id], onDelete: Cascade)
+
+  genre MusicGenre @relation(fields: [genreId], references: [id], onDelete: Restrict)
+
+  @@unique([artistProfileId, genreId])
+  @@index([artistProfileId])
+  @@index([genreId])
+}
+
+model BandMember {
+  id String @id @default(uuid())
+
+  artistProfileId String
+
+  name           String
+  designation    String?
+  profilePicture String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  artistProfile ArtistProfile @relation(fields: [artistProfileId], references: [id], onDelete: Cascade)
+
+  @@index([artistProfileId])
+}
+
+model ArtistProfileRole {
+  id              String @id @default(uuid())
+  artistProfileId String
+  artistRoleId    String
+
+  createdAt DateTime @default(now())
+
+  artistProfile ArtistProfile @relation(fields: [artistProfileId], references: [id], onDelete: Cascade)
+  artistRole    ArtistRole    @relation(fields: [artistRoleId], references: [id], onDelete: Restrict)
+
+  @@unique([artistProfileId, artistRoleId])
+  @@index([artistProfileId])
+  @@index([artistRoleId])
+}
+
+model ArtistProfileInstrument {
+  id              String @id @default(uuid())
+  artistProfileId String
+  instrumentId    String
+
+  createdAt DateTime @default(now())
+
+  artistProfile ArtistProfile @relation(fields: [artistProfileId], references: [id], onDelete: Cascade)
+  instrument    Instrument    @relation(fields: [instrumentId], references: [id], onDelete: Restrict)
+
+  @@unique([artistProfileId, instrumentId])
+  @@index([artistProfileId])
+  @@index([instrumentId])
+}
+
+model ArtistProfileVisual {
+  id              String @id @default(uuid())
+  artistProfileId String @unique
+
+  artistCoverPicture String?
+  profilePicture     String?
+  artistLogo         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  artistProfile ArtistProfile @relation(fields: [artistProfileId], references: [id], onDelete: Cascade)
+}
+
+model ArtistSocialProfile {
+  id              String @id @default(uuid())
+  artistProfileId String @unique
+
+  facebook  String?
+  instagram String?
+  tiktok    String?
+  youtube   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  artistProfile ArtistProfile @relation(fields: [artistProfileId], references: [id], onDelete: Cascade)
+
+  others ArtistSocialProfileOther[]
+}
+
+model ArtistSocialProfileOther {
+  id              String @id @default(uuid())
+  socialProfileId String
+
+  name String
+  logo String?
+  url  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  socialProfile ArtistSocialProfile @relation(fields: [socialProfileId], references: [id], onDelete: Cascade)
+
+  @@index([socialProfileId])
+}

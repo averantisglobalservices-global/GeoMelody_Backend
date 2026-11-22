@@ -1,0 +1,472 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum ArtistRegistrationStatus {
+  PENDING_VERIFICATION
+  EMAIL_VERIFIED
+  MOBILE_VERIFIED
+  READY_TO_COMPLETE
+  COMPLETED
+  EXPIRED
+}
+
+// ============================================================
+// USER
+// ============================================================
+
+model User {
+  id String @id @default(uuid())
+
+  email String @unique
+
+  countryCode String?
+  mobile      String?
+
+  passwordHash String?
+
+  firstName String?
+  lastName  String?
+
+  // 1 = Active
+  // 0 = Inactive
+  status Int @default(1)
+
+  roleId String
+
+  emailVerified  Boolean @default(false)
+  mobileVerified Boolean @default(false)
+
+  deletedAt   DateTime?
+  lastLoginAt DateTime?
+  lastLoginIp String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+
+  role Role @relation(
+    fields: [roleId],
+    references: [id],
+    onDelete: Restrict
+  )
+
+  refreshTokens      RefreshToken[]
+  passwordResets     PasswordReset[]
+  emailVerifications EmailVerification[]
+  loginHistory       LoginHistory[]
+
+  auditLogs AuditLog[] @relation("AuditActor")
+
+  artistRegistration ArtistRegistration? @relation("ArtistRegistrationUser")
+
+  @@unique([countryCode, mobile])
+
+  @@index([roleId])
+  @@index([status])
+  @@index([deletedAt])
+  @@index([createdAt])
+  @@index([lastLoginAt])
+}
+
+// ============================================================
+// ROLE
+// ============================================================
+
+model Role {
+  id          String @id @default(uuid())
+  code        String @unique
+  name        String
+  description String?
+
+  status Int @default(1)
+
+  isAdmin   Boolean @default(false)
+  isSystem  Boolean @default(false)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       User[]
+  permissions RolePermission[]
+
+  @@index([status])
+  @@index([isAdmin])
+  @@index([isSystem])
+  @@index([deletedAt])
+  @@index([createdAt])
+}
+
+// ============================================================
+// PERMISSION
+// ============================================================
+
+model Permission {
+  id          String @id @default(uuid())
+  code        String @unique
+  name        String
+  description String?
+
+  status   Int     @default(1)
+  isSystem Boolean @default(false)
+
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roles RolePermission[]
+
+  @@index([status])
+  @@index([isSystem])
+  @@index([deletedAt])
+  @@index([createdAt])
+}
+
+// ============================================================
+// ROLE PERMISSION
+// ============================================================
+
+model RolePermission {
+  id String @id @default(uuid())
+
+  roleId       String
+  permissionId String
+
+  createdAt DateTime @default(now())
+
+  role Role @relation(
+    fields: [roleId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  permission Permission @relation(
+    fields: [permissionId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@unique([roleId, permissionId])
+
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+// ============================================================
+// REFRESH TOKEN
+// ============================================================
+
+model RefreshToken {
+  id String @id @default(uuid())
+
+  userId String
+
+  tokenHash String
+
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+}
+
+// ============================================================
+// PASSWORD RESET
+// ============================================================
+
+model PasswordReset {
+  id String @id @default(uuid())
+
+  userId String
+
+  tokenHash String
+
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([usedAt])
+}
+
+// ============================================================
+// EMAIL VERIFICATION
+// ============================================================
+
+model EmailVerification {
+  id String @id @default(uuid())
+
+  userId String
+
+  tokenHash String
+
+  expiresAt  DateTime
+  verifiedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([verifiedAt])
+}
+
+// ============================================================
+// LOGIN HISTORY
+// ============================================================
+
+model LoginHistory {
+  id String @id @default(uuid())
+
+  userId String
+
+  ipAddress String?
+  userAgent String?
+
+  deviceName String?
+  deviceType String?
+  platform   String?
+
+  success       Boolean @default(false)
+  failureReason String?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(
+    fields: [userId],
+    references: [id],
+    onDelete: Cascade
+  )
+
+  @@index([userId, createdAt])
+  @@index([success])
+  @@index([ipAddress])
+}
+
+// ============================================================
+// COUNTRY
+// ============================================================
+
+model Country {
+  id String @id @default(uuid())
+
+  name String
+
+  iso2 String @unique
+  iso3 String? @unique
+
+  phoneCode String?
+
+  status Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cities City[]
+
+  artistRegistrations ArtistRegistration[]
+
+  @@index([status])
+  @@index([name])
+}
+
+// ============================================================
+// CITY
+// ============================================================
+
+model City {
+  id String @id @default(uuid())
+
+  countryId String
+
+  name String
+
+  status Int @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  country Country @relation(
+    fields: [countryId],
+    references: [id],
+    onDelete: Restrict
+  )
+
+  artistRegistrations ArtistRegistration[]
+
+  @@unique([countryId, name])
+
+  @@index([countryId])
+  @@index([status])
+  @@index([name])
+}
+
+// ============================================================
+// ARTIST REGISTRATION
+// ============================================================
+
+model ArtistRegistration {
+  id String @id @default(uuid())
+
+  // Registration identity
+
+  email String @unique
+
+  countryCode String?
+  mobile      String?
+
+  // Verification status
+
+  emailVerified  Boolean @default(false)
+  mobileVerified Boolean @default(false)
+
+  emailVerifiedAt  DateTime?
+  mobileVerifiedAt DateTime?
+
+  status ArtistRegistrationStatus @default(PENDING_VERIFICATION)
+
+  // Artist profile
+
+  title       String?
+  firstName   String?
+  lastName    String?
+  gender      String?
+  dateOfBirth DateTime?
+
+  countryId String?
+  cityId    String?
+
+  // Email OTP
+  // Expiry: 2 minutes
+
+  emailOtpHash      String?
+  emailOtpExpiresAt DateTime?
+  emailOtpAttempts  Int @default(0)
+
+  // Mobile OTP
+  // Expiry: 2 minutes
+
+  mobileOtpHash      String?
+  mobileOtpExpiresAt DateTime?
+  mobileOtpAttempts  Int @default(0)
+
+  // Registration lifecycle
+
+  // Set when both email and mobile are verified
+  verificationCompletedAt DateTime?
+
+  // verificationCompletedAt + 15 minutes
+  expiresAt DateTime?
+
+  // Set when registration is successfully completed
+  completedAt DateTime?
+
+  // Created User
+
+  userId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+
+  country Country? @relation(
+    fields: [countryId],
+    references: [id],
+    onDelete: Restrict
+  )
+
+  city City? @relation(
+    fields: [cityId],
+    references: [id],
+    onDelete: Restrict
+  )
+
+  user User? @relation(
+    "ArtistRegistrationUser",
+    fields: [userId],
+    references: [id],
+    onDelete: Restrict
+  )
+
+  @@unique([countryCode, mobile])
+
+  @@index([status])
+  @@index([expiresAt])
+  @@index([countryId])
+  @@index([cityId])
+  @@index([createdAt])
+  @@index([verificationCompletedAt])
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+
+model AuditLog {
+  id String @id @default(uuid())
+
+  actorId String?
+
+  action String
+  module String
+
+  entityType String?
+  entityId   String?
+
+  oldData Json?
+  newData Json?
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  actor User? @relation(
+    "AuditActor",
+    fields: [actorId],
+    references: [id],
+    onDelete: SetNull
+  )
+
+  @@index([actorId])
+  @@index([module])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

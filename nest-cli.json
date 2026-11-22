@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/geomelody-backend/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/geomelody-backend/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/geomelody-backend",
+  "projects": {
+    "administration-service": {
+      "type": "application",
+      "root": "apps/administration-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/administration-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/administration-service/tsconfig.app.json"
+      }
+    },
+    "api-gateway": {
+      "type": "application",
+      "root": "apps/api-gateway",
+      "entryFile": "main",
+      "sourceRoot": "apps/api-gateway/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/api-gateway/tsconfig.app.json"
+      }
+    },
+    "artist-service": {
+      "type": "application",
+      "root": "apps/artist-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/artist-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/artist-service/tsconfig.app.json"
+      }
+    },
+    "auth": {
+      "type": "library",
+      "root": "libs/auth",
+      "entryFile": "index",
+      "sourceRoot": "libs/auth/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/auth/tsconfig.lib.json"
+      }
+    },
+    "auth-service": {
+      "type": "application",
+      "root": "apps/auth-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/auth-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/auth-service/tsconfig.app.json"
+      }
+    },
+    "config": {
+      "type": "library",
+      "root": "libs/config",
+      "entryFile": "index",
+      "sourceRoot": "libs/config/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/config/tsconfig.lib.json"
+      }
+    },
+    "database": {
+      "type": "library",
+      "root": "libs/database",
+      "entryFile": "index",
+      "sourceRoot": "libs/database/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/database/tsconfig.lib.json"
+      }
+    },
+    "geomelody-backend": {
+      "type": "application",
+      "root": "apps/geomelody-backend",
+      "entryFile": "main",
+      "sourceRoot": "apps/geomelody-backend/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/geomelody-backend/tsconfig.app.json"
+      }
+    },
+    "storage": {
+      "type": "library",
+      "root": "libs/storage",
+      "entryFile": "index",
+      "sourceRoot": "libs/storage/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/storage/tsconfig.lib.json"
+      }
+    }
+  }
+}

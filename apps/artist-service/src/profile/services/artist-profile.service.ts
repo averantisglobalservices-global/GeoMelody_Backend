@@ -1245,8 +1245,14 @@ async updateSocialProfileWithPictures(
   const oldKeysToDelete: string[] = [];
 
   try {
-    const preparedOthers = [];
+    type PreparedSocialOther = {
+      id?: string;
+      name: string;
+      url: string;
+      logo: string | null;
+    };
 
+const preparedOthers: PreparedSocialOther[] = [];
     for (let index = 0; index < (others?.length ?? 0); index++) {
       const item = others![index];
 
